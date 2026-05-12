@@ -48,7 +48,6 @@ public class CategoryServiceImpl implements CategoryService{
         categoryResponse.setPageSize(categoryPage.getSize());
         categoryResponse.setTotalPages(categoryPage.getTotalPages());
         categoryResponse.setTotalElements(categoryPage.getTotalElements());
-        categoryResponse.setPageNumber(categoryPage.getNumber());
         categoryResponse.setLastPage(categoryPage.isLast());
         return categoryResponse;
     }
@@ -56,10 +55,9 @@ public class CategoryServiceImpl implements CategoryService{
     @Override
     public CategoryDTO createCategory(CategoryDTO categoryDTO) {
         Category category = modelMapper.map(categoryDTO, Category.class);
-        Category categoryFromDb = categoryRepository.findByCategoryName(category.getCategoryName());
-        if(categoryFromDb != null){
-            throw new APIException(String.format("Category with category name: %s already exists!", category.getCategoryName()));
-        }
+        categoryRepository.findByCategoryName(category.getCategoryName()).ifPresent(c -> {
+            throw new APIException(String.format("Category with category name: %s already exists!", c.getCategoryName()));
+        });
         Category savedCategory = categoryRepository.save(category);
         return modelMapper.map(savedCategory,CategoryDTO.class);
     }
@@ -72,10 +70,13 @@ public class CategoryServiceImpl implements CategoryService{
         return modelMapper.map(categoryToDelete, CategoryDTO.class);
     }
 
-    @Override // TODO: Currently a category name can be changed to have the name of category that already exists
+    @Override
     public CategoryDTO updateCategory(CategoryDTO categoryDTO, Long categoryId) {
         categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
+        categoryRepository.findByCategoryName(categoryDTO.getCategoryName()).ifPresent(c -> {
+            throw new APIException(String.format("Category with category name: %s already exists!", c.getCategoryName()));
+        });
 
         Category category = modelMapper.map(categoryDTO, Category.class);
         // category currently doesn't have an ID. If we save it without setting ID, then JPA will simply insert a NEW record, if we do SET the ID which is the Primary key before saving, JPA will UPDATE the existing record
