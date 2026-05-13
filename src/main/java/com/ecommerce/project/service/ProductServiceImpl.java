@@ -1,5 +1,6 @@
 package com.ecommerce.project.service;
 
+import com.ecommerce.project.exceptions.APIException;
 import com.ecommerce.project.exceptions.ResourceNotFoundException;
 import com.ecommerce.project.model.Category;
 import com.ecommerce.project.model.Product;
@@ -44,6 +45,11 @@ public class ProductServiceImpl implements ProductService{
     public ProductDTO addProduct(ProductDTO productDTO, Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
+        productRepository.findByProductNameAndCategory(productDTO.getProductName(), category)
+                .ifPresent(p -> {
+                    throw new APIException(String.format("Product with product name: %s already exists!", p.getProductName()));
+                });
+
         Product productToSave = modelMapper.map(productDTO, Product.class);
         productToSave.setImage("default.png");
         productToSave.setSpecialPrice(calculateSpecialPrice(productDTO.getPrice(), productDTO.getDiscount()));
@@ -94,6 +100,12 @@ public class ProductServiceImpl implements ProductService{
     public ProductDTO updateProduct(ProductDTO productDTO, Long productId) {
         Product productFromDB = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+        productRepository.findByProductNameAndCategory(productDTO.getProductName(), productFromDB.getCategory())
+                .ifPresent(p -> {
+                    if (!p.getProductId().equals(productId)) {
+                        throw new APIException(String.format("Product with product name: %s already exists in this category!", p.getProductName()));
+                    }
+                });
 
         Product product = modelMapper.map(productDTO, Product.class);
         productFromDB.setProductName(product.getProductName());
