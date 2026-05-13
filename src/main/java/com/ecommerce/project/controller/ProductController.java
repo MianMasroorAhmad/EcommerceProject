@@ -7,6 +7,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @RestController
 @RequestMapping("/api")
@@ -20,8 +23,7 @@ public class ProductController {
     }
 
     @PostMapping("/admin/categories/{categoryId}/products")
-    public ResponseEntity<ProductDTO> addProduct(@RequestBody ProductDTO productDTO,
-                                                 @PathVariable Long categoryId){
+    public ResponseEntity<ProductDTO> addProduct(@RequestBody ProductDTO productDTO, @PathVariable Long categoryId){
         ProductDTO savedProductDTO = productService.addProduct(productDTO, categoryId);
         return new ResponseEntity<>(savedProductDTO, HttpStatus.CREATED);
     }
@@ -42,9 +44,20 @@ public class ProductController {
 
     // TODO: If i want to update category as well. Perhaps just create ProductRequestDTO and then in that include categoryId, do a null check on it in service layer and if present update category otherwise dont
     @PutMapping("/admin/products/{productId}")
-    public ResponseEntity<ProductDTO> updateProduct(@RequestBody ProductDTO productDTO,
-                                                    @PathVariable Long productId){
-        ProductDTO updatedProduct = productService.updateProduct(productDTO, productId);
-        return ResponseEntity.ok(updatedProduct);
+    public ResponseEntity<ProductDTO> updateProduct(@RequestBody ProductDTO productDTO, @PathVariable Long productId){
+        ProductDTO updatedProductDTO = productService.updateProduct(productDTO, productId);
+        return ResponseEntity.ok(updatedProductDTO);
+    }
+
+    @PutMapping("/admin/products/{productId}/image")
+    public ResponseEntity<ProductDTO> updateProductImage(@PathVariable Long productId, @RequestParam("image") MultipartFile image) {
+        ProductDTO updatedProductImage = productService.updateProductImage(productId, image);
+        return ResponseEntity.ok(updatedProductImage);
+    }
+
+    @DeleteMapping("/admin/products/{productId}")
+    public ResponseEntity<ProductDTO> deleteProduct(@PathVariable Long productId){
+        ProductDTO deletedProductDTO = productService.deleteProduct(productId);
+        return ResponseEntity.ok(deletedProductDTO);
     }
 }

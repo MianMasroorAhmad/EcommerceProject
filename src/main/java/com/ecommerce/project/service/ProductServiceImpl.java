@@ -9,8 +9,9 @@ import com.ecommerce.project.repositories.CategoryRepository;
 import com.ecommerce.project.repositories.ProductRepository;
 import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
+import org.springframework.web.multipart.MultipartFile;
 import java.util.List;
 
 @Service
@@ -19,14 +20,20 @@ public class ProductServiceImpl implements ProductService{
     private final ProductRepository productRepository;
     private final CategoryRepository categoryRepository;
     private final ModelMapper modelMapper;
+    private final FileService fileService;
+
+    @Value("${project.image}")
+    private String path;
 
     @Autowired
     public ProductServiceImpl(ProductRepository productRepository,
                               CategoryRepository categoryRepository,
-                              ModelMapper modelMapper){
+                              ModelMapper modelMapper,
+                              FileService fileService) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.modelMapper = modelMapper;
+        this.fileService = fileService;
     }
 
     private double calculateSpecialPrice(double price, double discount) {
@@ -38,7 +45,7 @@ public class ProductServiceImpl implements ProductService{
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new ResourceNotFoundException("Category", "categoryId", categoryId));
         Product productToSave = modelMapper.map(productDTO, Product.class);
-        productToSave.setImage("default.png"); //TODO: To be implemented
+        productToSave.setImage("default.png");
         productToSave.setSpecialPrice(calculateSpecialPrice(productDTO.getPrice(), productDTO.getDiscount()));
         productToSave.setCategory(category);
         Product savedProduct = productRepository.save(productToSave);
@@ -88,14 +95,38 @@ public class ProductServiceImpl implements ProductService{
         Product productFromDB = productRepository.findById(productId)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
 
-        productFromDB.setProductName(productDTO.getProductName());
-        productFromDB.setDescription(productDTO.getDescription());
-        productFromDB.setQuantity(productDTO.getQuantity());
-        productFromDB.setPrice(productDTO.getPrice());
-        productFromDB.setDiscount(productDTO.getDiscount());
-        productFromDB.setSpecialPrice(calculateSpecialPrice(productDTO.getPrice(), productDTO.getDiscount()));
+        Product product = modelMapper.map(productDTO, Product.class);
+        productFromDB.setProductName(product.getProductName());
+        productFromDB.setDescription(product.getDescription());
+        productFromDB.setQuantity(product.getQuantity());
+        productFromDB.setPrice(product.getPrice());
+        productFromDB.setDiscount(product.getDiscount());
+        productFromDB.setSpecialPrice(calculateSpecialPrice(product.getPrice(), product.getDiscount()));
 
         Product savedProduct = productRepository.save(productFromDB);
+        return modelMapper.map(savedProduct, ProductDTO.class);
+    }
+
+    @Override
+    public ProductDTO deleteProduct(Long productId) {
+        Product productFromDB = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+
+        productRepository.delete(productFromDB);
+        return modelMapper.map(productFromDB, ProductDTO.class);
+    }
+
+    @Override
+    public ProductDTO updateProductImage(Long productId, MultipartFile image) {
+        Product productFromDB = productRepository.findById(productId)
+                .orElseThrow(() -> new ResourceNotFoundException("Product", "productId", productId));
+
+        String fileName = fileService.uploadImage(path, image);
+
+        productFromDB.setImage(fileName);
+
+        Product savedProduct = productRepository.save(productFromDB);
+
         return modelMapper.map(savedProduct, ProductDTO.class);
     }
 }
