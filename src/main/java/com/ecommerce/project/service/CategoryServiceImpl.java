@@ -33,23 +33,22 @@ public class CategoryServiceImpl implements CategoryService{
                 ? Sort.by(sortBy).ascending()
                 : Sort.by(sortBy).descending();
         Pageable pageDetails = PageRequest.of(pageNumber, pageSize, sortByAndOrder);
-        Page<Category> categoryPage = categoryRepository.findAll(pageDetails);
-        List<Category> categories = categoryPage.getContent();
+        Page<Category> categoriesPage = categoryRepository.findAll(pageDetails);
+        List<Category> categories = categoriesPage.getContent();
         if(categories.isEmpty()){
             throw new APIException("No Categories created so far");
         }
         List<CategoryDTO> categoryDTOS = categories.stream()
                 .map(category -> modelMapper.map(category, CategoryDTO.class))
                 .toList();
-        CategoryResponse categoryResponse = new CategoryResponse();
-
-        categoryResponse.setContent(categoryDTOS);
-        categoryResponse.setPageNumber(categoryPage.getNumber());
-        categoryResponse.setPageSize(categoryPage.getSize());
-        categoryResponse.setTotalPages(categoryPage.getTotalPages());
-        categoryResponse.setTotalElements(categoryPage.getTotalElements());
-        categoryResponse.setLastPage(categoryPage.isLast());
-        return categoryResponse;
+        return CategoryResponse.builder()
+                .content(categoryDTOS)
+                .pageNumber(categoriesPage.getNumber())
+                .pageSize(categoriesPage.getSize())
+                .totalElements(categoriesPage.getTotalElements())
+                .totalPages(categoriesPage.getTotalPages())
+                .lastPage(categoriesPage.isLast())
+                .build();
     }
 
     @Override
